@@ -163,18 +163,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
         slivers: [
           SliverAppBar(
             backgroundColor: Colors.white,
-            elevation: 0, // Remove any default shadow
-            floating: true, // Make the AppBar float on scroll
-            snap: true, // Snap back into view when scrolling up
+            elevation: 0,
+            floating: true,
+            snap: true,
             flexibleSpace: FlexibleSpaceBar(
               title: Row(
                 children: [
                   Padding(
-                    padding: const EdgeInsets.only(
-                        left: 9.0), // Adjust padding as needed
+                    padding: const EdgeInsets.only(left: 9.0),
                     child: Image.asset(
-                      'assets/siaga112logo.png', // Path to your logo image
-                      height: 40.0, // Adjust the height as needed
+                      'assets/siaga112logo.png',
+                      height: 40.0,
                     ),
                   ),
                   SizedBox(width: 8),
@@ -201,33 +200,93 @@ class _DashboardScreenState extends State<DashboardScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildImageSlider(), // Add the image slider here
-                  const SizedBox(height: 16),
-                  Container(
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      color: const Color.fromARGB(
-                          255, 231, 76, 60), // Bright red color
-                      borderRadius: BorderRadius.only(
-                        topLeft: Radius.circular(12),
-                        topRight: Radius.circular(12),
-                        bottomLeft: Radius.zero,
-                        bottomRight: Radius.zero,
+                  // "Total Tickets Over Last 3 Days" text
+                  Text(
+                    'Total Tickets Over Last 3 Days',
+                    style: GoogleFonts.publicSans(
+                      textStyle: const TextStyle(
+                        color: Color(0xFF111517),
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: -0.015,
                       ),
                     ),
-                    padding: const EdgeInsets.symmetric(
-                        vertical: 12.0, horizontal: 16.0),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Total Tickets card
+                  _buildFullWidthCard(
+                      context, 'Total Tickets', stats['Total Tickets']!),
+                  const SizedBox(height: 16),
+
+                  // Add "Call Over Last 3 Days" text
+                  Text(
+                    'Call Over Last 3 Days',
+                    style: GoogleFonts.publicSans(
+                      textStyle: const TextStyle(
+                        color: Color(0xFF111517),
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: -0.015,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Row for Non-Emergency and Emergency cards
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: _buildCard(
+                            context, 'Non-Emergency', stats['Non-Emergency']!,
+                            icon: Icons.warning),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: _buildCard(
+                            context, 'Emergency', stats['Emergency']!,
+                            icon: Icons.local_fire_department),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Row for Drop Call and Prank Call cards
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: _buildCard(
+                            context, 'Drop Call', stats['Dropped Calls']!,
+                            icon: Icons.phone_disabled),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: _buildCard(
+                            context, 'Prank Call', stats['Prank']!,
+                            icon: Icons.face),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(
+                      height:
+                          24), // Space between Prank Call card and News container
+
+                  // News section with red background and rounded corners
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Color(0xFFE74C3C),
+                      borderRadius:
+                          BorderRadius.circular(12.0), // Rounded corners
+                    ),
+                    padding: const EdgeInsets.all(16.0),
                     child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(
-                          Icons.calendar_today,
-                          color: Colors.white,
-                        ),
+                        Icon(Icons.new_releases, color: Colors.white),
                         SizedBox(width: 8),
                         Text(
-                          'Call Over Last 3 Days',
+                          'News',
                           style: GoogleFonts.publicSans(
                             textStyle: const TextStyle(
                               color: Colors.white,
@@ -241,69 +300,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  // Container to wrap the cards
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Color.fromARGB(
-                          255, 240, 240, 240), // Light gray color
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.grey.withOpacity(0.5),
-                          spreadRadius: 0,
-                          blurRadius: 4,
-                          offset: Offset(0, 2), // Offset for the shadow
-                        ),
-                      ],
-                    ),
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      children: [
-                        // First row: Non-Emergency and Emergency
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Expanded(
-                              child: _buildCard(context, 'Non-Emergency',
-                                  stats['Non-Emergency']!,
-                                  icon: Icons.warning),
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: _buildCard(
-                                  context, 'Emergency', stats['Emergency']!,
-                                  icon: Icons.local_fire_department),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        // Second row: Drop Call and Prank Call
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Expanded(
-                              child: _buildCard(
-                                  context, 'Drop Call', stats['Dropped Calls']!,
-                                  icon: Icons.phone_disabled),
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: _buildCard(
-                                  context, 'Prank Call', stats['Prank']!,
-                                  icon: Icons.face),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        // Third row: Total Tickets
-                        _buildFullWidthCard(
-                            context, 'Total Tickets', stats['Total Tickets']!),
-                      ],
-                    ),
-                  ),
+
+                  // Image Slider
+                  _buildImageSlider(),
                   const SizedBox(height: 24),
+
+                  // Combined Chart
                   _buildCombinedChart('Call Statistics', combinedChartData),
                   const SizedBox(height: 24),
+
+                  // Pie Chart
                   _buildPieChart('Call Distribution', pieChartData),
                 ],
               ),
