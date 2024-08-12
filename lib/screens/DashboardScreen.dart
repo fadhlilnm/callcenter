@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:syncfusion_flutter_charts/charts.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import '../services/api_service.dart';
+import 'NewsDetailScreen.dart';
 import 'dart:async';
 
 class ChartData {
@@ -314,8 +315,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildImageSlider() {
-    return FutureBuilder<List<String>>(
-      future: apiService.fetchImageThumbs(),
+    return FutureBuilder<List<dynamic>>(
+      future: _fetchNews(), // Fetch the news data to get images
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return Center(child: CircularProgressIndicator());
@@ -324,7 +325,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
           return Center(child: Text('No images available'));
         } else {
-          final imgList = snapshot.data!;
+          final newsList = snapshot.data!;
 
           return CarouselSlider(
             options: CarouselOptions(
@@ -338,17 +339,29 @@ class _DashboardScreenState extends State<DashboardScreen> {
               enableInfiniteScroll: true,
               scrollDirection: Axis.horizontal,
             ),
-            items: imgList.map((url) {
+            items: newsList.map((newsItem) {
+              final imageUrl = newsItem['image_thumb'];
               return Builder(
                 builder: (BuildContext context) {
-                  return Container(
-                    width: MediaQuery.of(context).size.width,
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(
-                          12), // Set the border radius here
-                      child: Image.network(
-                        url,
-                        fit: BoxFit.cover,
+                  return GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) =>
+                              NewsDetailScreen(newsItem: newsItem),
+                        ),
+                      );
+                    },
+                    child: Container(
+                      width: MediaQuery.of(context).size.width,
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(
+                            12), // Set the border radius here
+                        child: Image.network(
+                          imageUrl,
+                          fit: BoxFit.cover,
+                        ),
                       ),
                     ),
                   );
@@ -361,92 +374,95 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Future<List<String>> _fetchImageUrls() async {
+  Future<List<dynamic>> _fetchNews() async {
     try {
       final response = await apiService.fetchNews();
-      final List<String> urls = (response)
-          .map((item) {
-            // Pastikan 'image_thumb' ada dalam item dan merupakan String
-            return item['image_thumb'] as String? ??
-                ''; // Menangani kemungkinan null
-          })
-          .where((url) => url.isNotEmpty)
-          .toList(); // Menghapus URL kosong
-      return urls;
+      return response; // Return the full list of news items
     } catch (e) {
-      print('Error fetching image URLs: $e');
+      print('Error fetching news: $e');
       return [];
     }
   }
 
   Widget _buildCard(
-      BuildContext context, String title, Map<String, String> data,
-      {required IconData icon}) {
-    return Container(
-      padding: EdgeInsets.all(8),
-      child: ElevatedButton(
-        onPressed: () {
-          if (title == 'Emergency') {
-            Navigator.pushNamed(context, '/emergency');
-          } else if (title == 'Non-Emergency') {
-            Navigator.pushNamed(context, '/non-emergency');
-          }
-        },
-        style: ElevatedButton.styleFrom(
-          foregroundColor: Colors.black,
-          backgroundColor: Colors.white,
-          elevation: 3,
-          padding: EdgeInsets.zero,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(15),
-            side: BorderSide(color: Colors.grey),
-          ),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Color.fromARGB(255, 255, 255, 255),
-                borderRadius: BorderRadius.vertical(top: Radius.circular(15)),
-              ),
-              child: Column(
-                children: [
-                  Icon(icon, color: Color(0xFFE74C3C)),
-                  SizedBox(height: 8),
-                  Text(
-                    title,
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.publicSans(
-                      textStyle: const TextStyle(
-                        color: Color(0xFF111517),
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: -0.015,
-                      ),
+    BuildContext context,
+    String title,
+    Map<String, String> data, {
+    required IconData icon,
+  }) {
+    return Card(
+      elevation: 3,
+      color: Colors.white, // Set the card color to white
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(15),
+        side: BorderSide(color: Colors.grey),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.white, // Ensure inner container color is white
+              borderRadius: BorderRadius.vertical(top: Radius.circular(15)),
+            ),
+            child: Column(
+              children: [
+                Icon(icon, color: Color(0xFFE74C3C)),
+                SizedBox(height: 8),
+                Text(
+                  title,
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.publicSans(
+                    textStyle: const TextStyle(
+                      color: Color(0xFF111517),
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: -0.015,
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: AnimatedCounter(
+              value: int.tryParse(data['data'] ?? '0') ?? 0,
+              style: GoogleFonts.publicSans(
+                textStyle: const TextStyle(
+                  color: Color(0xFF111517),
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: -0.015,
+                ),
+              ),
+              duration: Duration(seconds: 2),
+            ),
+          ),
+          if (title == 'Emergency' || title == 'Non-Emergency')
             Padding(
               padding: const EdgeInsets.all(8.0),
-              child: AnimatedCounter(
-                value: int.tryParse(data['data'] ?? '0') ?? 0,
-                style: GoogleFonts.publicSans(
-                  textStyle: const TextStyle(
-                    color: Color(0xFF111517),
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: -0.015,
+              child: ElevatedButton(
+                onPressed: () {
+                  if (title == 'Emergency') {
+                    Navigator.pushNamed(context, '/emergency');
+                  } else if (title == 'Non-Emergency') {
+                    Navigator.pushNamed(context, '/non-emergency');
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  foregroundColor: Colors.white,
+                  backgroundColor: Color(0xFFE74C3C), // Text color
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(15),
                   ),
+                  padding: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
                 ),
-                duration: Duration(seconds: 2),
+                child: Text('View Details'),
               ),
             ),
-          ],
-        ),
+        ],
       ),
     );
   }
