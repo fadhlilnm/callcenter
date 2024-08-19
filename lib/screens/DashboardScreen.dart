@@ -75,6 +75,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   };
 
   Timer? _refreshTimer;
+  List<dynamic>? _cachedNewsData; // Cache for news data
 
   @override
   void initState() {
@@ -170,7 +171,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               title: Row(
                 children: [
                   Padding(
-                    padding: const EdgeInsets.only(left: 9.0),
+                    padding: const EdgeInsets.only(left: 20.0),
                     child: Image.asset(
                       'assets/siaga112logo.png',
                       height: 40.0,
@@ -219,7 +220,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       context, 'Total Tickets', stats['Total Tickets']!),
                   const SizedBox(height: 16),
 
-                  // Add "Call Over Last 3 Days" text
+                  // "Call Over Last 3 Days" text
                   Text(
                     'Call Over Last 3 Days',
                     style: GoogleFonts.publicSans(
@@ -271,38 +272,39 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                   const SizedBox(
                       height:
-                          24), // Space between Prank Call card and News container
+                          24), // Space between Prank Call card and News text
 
-                  // News section with red background and rounded corners
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Color(0xFFE74C3C),
-                      borderRadius:
-                          BorderRadius.circular(12.0), // Rounded corners
-                    ),
-                    padding: const EdgeInsets.all(16.0),
-                    child: Row(
-                      children: [
-                        Icon(Icons.new_releases, color: Colors.white),
-                        SizedBox(width: 8),
-                        Text(
-                          'News',
-                          style: GoogleFonts.publicSans(
-                            textStyle: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: -0.015,
-                            ),
-                          ),
-                        ),
-                      ],
+                  // "News" text, with similar styling as "Call Over Last 3 Days"
+                  Text(
+                    'News',
+                    style: GoogleFonts.publicSans(
+                      textStyle: const TextStyle(
+                        color: Color(0xFF111517),
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: -0.015,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 16),
 
                   // Image Slider
                   _buildImageSlider(),
+                  const SizedBox(
+                      height: 24), // Increased space between slider and text
+
+                  // "Statistics" text
+                  Text(
+                    'Statistics',
+                    style: GoogleFonts.publicSans(
+                      textStyle: const TextStyle(
+                        color: Color(0xFF111517),
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: -0.015,
+                      ),
+                    ),
+                  ),
                   const SizedBox(height: 24),
 
                   // Combined Chart
@@ -322,7 +324,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _buildImageSlider() {
     return FutureBuilder<List<dynamic>>(
-      future: _fetchNews(), // Fetch the news data to get images
+      future: _getCachedOrFetchNews(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return Center(child: CircularProgressIndicator());
@@ -335,7 +337,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
           return CarouselSlider(
             options: CarouselOptions(
-              height: 180.0, // Adjust height as needed
+              height: 200.0, // Adjust height as needed
               aspectRatio: 16 / 9,
               viewportFraction: 1.0,
               autoPlay: true,
@@ -347,6 +349,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
             items: newsList.map((newsItem) {
               final imageUrl = newsItem['image_thumb'];
+              final title = newsItem['title'];
               return Builder(
                 builder: (BuildContext context) {
                   return GestureDetector(
@@ -359,16 +362,51 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         ),
                       );
                     },
-                    child: Container(
-                      width: MediaQuery.of(context).size.width,
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(
-                            12), // Set the border radius here
-                        child: Image.network(
-                          imageUrl,
-                          fit: BoxFit.cover,
+                    child: Stack(
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(
+                              12), // Rounded corners for the image
+                          child: Image.network(
+                            imageUrl,
+                            width: MediaQuery.of(context).size.width,
+                            fit: BoxFit.cover,
+                          ),
                         ),
-                      ),
+                        Positioned(
+                          bottom: 0,
+                          left: 0,
+                          right: 0,
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.only(
+                              bottomLeft: Radius.circular(12),
+                              bottomRight: Radius.circular(12),
+                            ), // Rounded corners for the bottom container
+                            child: Container(
+                              padding: EdgeInsets.all(8),
+                              color: Colors.black.withOpacity(0.6),
+                              child: Text(
+                                title,
+                                style: GoogleFonts.publicSans(
+                                  textStyle: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    shadows: [
+                                      Shadow(
+                                        blurRadius: 2.0,
+                                        color: Colors.black,
+                                        offset: Offset(1.0, 1.0),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   );
                 },
@@ -380,13 +418,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Future<List<dynamic>> _fetchNews() async {
-    try {
-      final response = await apiService.fetchNews();
-      return response; // Return the full list of news items
-    } catch (e) {
-      print('Error fetching news: $e');
-      return [];
+  Future<List<dynamic>> _getCachedOrFetchNews() async {
+    if (_cachedNewsData != null && _cachedNewsData!.isNotEmpty) {
+      return _cachedNewsData!;
+    } else {
+      try {
+        final response = await apiService.fetchNews();
+        _cachedNewsData = response; // Cache the news data
+        return response;
+      } catch (e) {
+        print('Error fetching news: $e');
+        return [];
+      }
     }
   }
 

@@ -8,6 +8,10 @@ class ApiService {
       'https://sim-bpbd.jakarta.go.id/api-cc/3-day-tiketing';
   final String _baseUrlNews =
       'https://sim-bpbd.jakarta.go.id/api-cc/view-berita';
+  final String _authUrl = 'https://api-bpbd.jakarta.go.id/api-prod/auth';
+  final String _weatherUrl =
+      'https://api-bpbd.jakarta.go.id/api-prod/bmkg/prakicu-dki-prov/20240816';
+  String? _token;
   final Map<String, String> _headers = {'x-username': 'BPBD!!'};
 
   Future<List<dynamic>> fetchCallData() async {
@@ -66,6 +70,55 @@ class ApiService {
       }
     } catch (e) {
       throw Exception('Failed to load image thumbs: $e');
+    }
+  }
+
+  Future<List<dynamic>> fetchWeatherData() async {
+    // Ensure token is fetched before making any requests
+    if (_token == null) {
+      await _fetchAuthToken();
+    }
+
+    try {
+      final response = await http.get(
+        Uri.parse(_weatherUrl),
+        headers: {
+          'X-Token': _token!, // Use the token obtained from the auth API
+        },
+      );
+
+      if (response.statusCode == 200) {
+        print('Weather Data Response: ${response.body}');
+        return json.decode(response.body)['data'];
+      } else {
+        print(
+            'Failed to load weather data, status code: ${response.statusCode}');
+        print('Response body: ${response.body}');
+        throw Exception('Failed to load weather data: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Exception: $e');
+      throw Exception('Failed to load weather data: $e');
+    }
+  }
+
+  Future<void> _fetchAuthToken() async {
+    final response = await http.post(
+      Uri.parse(_authUrl),
+      headers: {
+        'X-Username': 'dev',
+        'X-Password': 'BpbDD3v!!##',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      final responseData = json.decode(response.body);
+      _token = responseData['response']['token'];
+      print('Token fetched successfully: $_token');
+    } else {
+      print('Failed to authenticate, status code: ${response.statusCode}');
+      print('Response body: ${response.body}');
+      throw Exception('Failed to authenticate: ${response.statusCode}');
     }
   }
 }

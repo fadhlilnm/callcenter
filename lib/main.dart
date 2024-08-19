@@ -3,6 +3,7 @@ import 'screens/DashboardScreen.dart';
 import 'screens/NewsScreen.dart';
 import 'screens/EmergencyScreen.dart';
 import 'screens/NonEmergencyScreen.dart';
+import 'screens/WeatherScreen.dart';
 
 void main() {
   runApp(MyApp());
@@ -36,6 +37,7 @@ class _MainScreenState extends State<MainScreen> {
   static List<Widget> _widgetOptions = <Widget>[
     DashboardScreen(),
     NewsScreen(),
+    WeatherScreen(),
   ];
 
   void _onItemTapped(int index) {
@@ -58,9 +60,13 @@ class _MainScreenState extends State<MainScreen> {
             icon: Icon(Icons.article),
             label: 'News',
           ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.cloud),
+            label: 'Weather', // Added Weather tab here
+          ),
         ],
         currentIndex: _selectedIndex,
-        selectedItemColor: Colors.amber[800],
+        selectedItemColor: Colors.red,
         onTap: _onItemTapped,
       ),
     );
