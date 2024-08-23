@@ -5,6 +5,10 @@ import 'package:carousel_slider/carousel_slider.dart';
 import '../services/api_service.dart';
 import 'NewsDetailScreen.dart';
 import 'dart:async';
+import 'package:callcenter/models/weather.dart';
+import 'package:smooth_page_indicator/smooth_page_indicator.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+import 'package:intl/intl.dart';
 
 class ChartData {
   ChartData(this.date, this.type, this.count);
@@ -57,6 +61,7 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   List<String> imgList = []; // Store image URLs here
+  Map<String, List<DailyWeather>> weatherByRegion = {};
   final ApiService apiService = ApiService();
   Map<String, Map<String, String>> stats = {
     'Total Tickets': {'data': 'Loading...', 'error': ''},
@@ -77,13 +82,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Timer? _refreshTimer;
   List<dynamic>? _cachedNewsData; // Cache for news data
 
+  List<DailyWeather> weatherData = [];
+  int _currentIndex = 0;
+
   @override
   void initState() {
     super.initState();
     fetchData();
+    fetchWeatherData(); // Fetch weather data on init
     _refreshTimer = Timer.periodic(Duration(minutes: 2), (timer) {
       fetchData();
     });
+  }
+
+  void groupWeatherByRegion(List<DailyWeather> weatherData) {
+    for (var weather in weatherData) {
+      if (!weatherByRegion.containsKey(weather.wilayah)) {
+        weatherByRegion[weather.wilayah] = [];
+      }
+      weatherByRegion[weather.wilayah]!.add(weather);
+    }
   }
 
   Future<void> fetchData() async {
@@ -146,6 +164,42 @@ class _DashboardScreenState extends State<DashboardScreen> {
           'Prank': {'data': 'Error', 'error': 'Network error: $e'},
           'Dropped Calls': {'data': 'Error', 'error': 'Network error: $e'},
         };
+      });
+    }
+  }
+
+  Future<void> fetchWeatherData() async {
+    try {
+      final weatherData =
+          await apiService.fetchWeatherData(); // Panggilan API Anda
+      print(
+          'API Response: $weatherData'); // Debug print untuk memeriksa respons
+
+      if (weatherData.isNotEmpty) {
+        setState(() {
+          weatherByRegion = {}; // Hapus data sebelumnya
+
+          // Kelompokkan data berdasarkan wilayah
+          final Map<String, List<DailyWeather>> groupedWeather = {};
+          for (var weather in weatherData) {
+            if (!groupedWeather.containsKey(weather.wilayah)) {
+              groupedWeather[weather.wilayah] = [];
+            }
+            // Batasi data cuaca per wilayah menjadi 4
+            if (groupedWeather[weather.wilayah]!.length < 4) {
+              groupedWeather[weather.wilayah]!.add(weather);
+            }
+          }
+
+          weatherByRegion = groupedWeather; // Assign data ke weatherByRegion
+        });
+      } else {
+        print('No weather data available');
+      }
+    } catch (e) {
+      print('Error fetching weather data: $e');
+      setState(() {
+        // Tangani kasus kesalahan, mungkin dengan menampilkan pesan error di UI
       });
     }
   }
@@ -293,6 +347,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   const SizedBox(
                       height: 24), // Increased space between slider and text
 
+                  // "Weather Forecast" text
+                  Text(
+                    'Perkiraan Cuaca',
+                    style: GoogleFonts.publicSans(
+                      textStyle: const TextStyle(
+                        color: Color(0xFF111517),
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: -0.015,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Weather Slider
+                  _buildWeatherSlider(),
+                  const SizedBox(
+                      height: 24), // Increased space between slider and text
+
                   // "Statistics" text
                   Text(
                     'Statistics',
@@ -319,6 +392,115 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildWeatherSlider() {
+    if (weatherByRegion.isEmpty) {
+      return Center(child: CircularProgressIndicator());
+    }
+
+    final allWeatherData = weatherByRegion.values.toList();
+    final PageController pageController = PageController();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          height: 250, // Adjust height as needed
+          child: PageView.builder(
+            controller: pageController,
+            itemCount: allWeatherData.length,
+            itemBuilder: (context, regionIndex) {
+              final regionWeather = allWeatherData[regionIndex];
+              final regionName = weatherByRegion.keys.toList()[regionIndex];
+
+              return Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      regionName,
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    SizedBox(height: 4),
+                    Expanded(
+                      child: GridView.builder(
+                        shrinkWrap: true,
+                        physics: NeverScrollableScrollPhysics(),
+                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          childAspectRatio: 1.8,
+                          crossAxisSpacing: 6.0,
+                          mainAxisSpacing: 6.0,
+                        ),
+                        itemCount: regionWeather.length,
+                        itemBuilder: (context, weatherIndex) {
+                          final weather = regionWeather[weatherIndex];
+                          final DateTime parsedDateTime =
+                              DateTime.parse(weather.localDatetime);
+                          final String formattedTime =
+                              DateFormat.Hm().format(parsedDateTime);
+
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 1.0),
+                            child: Row(
+                              children: [
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      formattedTime,
+                                      style: TextStyle(fontSize: 14),
+                                    ),
+                                    SizedBox(height: 2),
+                                    weather.image.endsWith('.svg')
+                                        ? SvgPicture.network(
+                                            weather.image,
+                                            height: 35,
+                                            width: 35,
+                                          )
+                                        : Image.network(
+                                            weather.image,
+                                            height: 35,
+                                            width: 35,
+                                          ),
+                                    SizedBox(height: 2),
+                                    Text(
+                                      weather.kondisiCuaca,
+                                      style: TextStyle(fontSize: 14),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ),
+        SizedBox(height: 8),
+        Center(
+          child: SmoothPageIndicator(
+            controller: pageController,
+            count: allWeatherData.length,
+            effect: ExpandingDotsEffect(
+              dotHeight: 8,
+              dotWidth: 8,
+              activeDotColor: Colors.blueAccent,
+            ),
+          ),
+        ),
+      ],
     );
   }
 

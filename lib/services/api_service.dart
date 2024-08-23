@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:callcenter/models/weather.dart';
 
 class ApiService {
   final String _baseUrlCallData =
@@ -9,8 +10,13 @@ class ApiService {
   final String _baseUrlNews =
       'https://sim-bpbd.jakarta.go.id/api-cc/view-berita';
   final String _authUrl = 'https://api-bpbd.jakarta.go.id/api-prod/auth';
-  final String _weatherUrl =
-      'https://api-bpbd.jakarta.go.id/api-prod/bmkg/prakicu-dki-prov/20240816';
+
+  // Function to get current date in 'yyyyMMdd' format
+  String getCurrentDate() {
+    final DateTime now = DateTime.now();
+    return '${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}';
+  }
+
   String? _token;
   final Map<String, String> _headers = {'x-username': 'BPBD!!'};
 
@@ -73,32 +79,54 @@ class ApiService {
     }
   }
 
-  Future<List<dynamic>> fetchWeatherData() async {
-    // Ensure token is fetched before making any requests
+  // Modify this method to use the dynamic date
+  Future<List<DailyWeather>> fetchWeatherData() async {
+    final String currentDate = getCurrentDate(); // Get current date
+    final String _weatherUrl =
+        'https://api-bpbd.jakarta.go.id/api-prod/bmkg/prakicu-dki-prov/$currentDate';
+
     if (_token == null) {
       await _fetchAuthToken();
     }
 
-    try {
-      final response = await http.get(
-        Uri.parse(_weatherUrl),
-        headers: {
-          'X-Token': _token!, // Use the token obtained from the auth API
-        },
-      );
+    final response = await http.post(
+      Uri.parse(_weatherUrl),
+      headers: {
+        'X-Token': _token!,
+        'X-Username': 'dev',
+        'Content-Type': 'application/json',
+      },
+    );
 
-      if (response.statusCode == 200) {
-        print('Weather Data Response: ${response.body}');
-        return json.decode(response.body)['data'];
+    print('Response body: ${response.body}'); // Log response body
+
+    if (response.statusCode == 200) {
+      if (response.headers['content-type']?.contains('application/json') ??
+          false) {
+        try {
+          Map<String, dynamic> jsonResponse = json.decode(response.body);
+          List<dynamic> data = jsonResponse['data'];
+          List<DailyWeather> weatherList = [];
+          for (var entry in data) {
+            List<dynamic> cuaca = entry['cuaca'];
+            String wilayah = entry['kabupaten'] ?? 'Tidak Diketahui';
+            for (var cuacaEntry in cuaca) {
+              DailyWeather weather = DailyWeather.fromJson(cuacaEntry);
+              weather.wilayah = wilayah; // Set region here
+              weatherList.add(weather);
+            }
+          }
+          return weatherList;
+        } catch (e) {
+          throw Exception('Error parsing JSON: $e');
+        }
       } else {
-        print(
-            'Failed to load weather data, status code: ${response.statusCode}');
-        print('Response body: ${response.body}');
-        throw Exception('Failed to load weather data: ${response.statusCode}');
+        throw Exception(
+            'Unexpected content type: ${response.headers['content-type']}');
       }
-    } catch (e) {
-      print('Exception: $e');
-      throw Exception('Failed to load weather data: $e');
+    } else {
+      throw Exception(
+          'Failed to load weather data, status code: ${response.statusCode}');
     }
   }
 
@@ -108,6 +136,7 @@ class ApiService {
       headers: {
         'X-Username': 'dev',
         'X-Password': 'BpbDD3v!!##',
+        'Content-Type': 'application/json',
       },
     );
 

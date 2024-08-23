@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart'; // Import flutter_svg for SVG support
 import '../services/api_service.dart';
+import 'package:callcenter/models/weather.dart';
 
 class WeatherScreen extends StatelessWidget {
   final ApiService apiService = ApiService();
@@ -8,9 +10,9 @@ class WeatherScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Weather Forecast'),
+        title: Text('Weather'),
       ),
-      body: FutureBuilder<List<dynamic>>(
+      body: FutureBuilder<List<DailyWeather>>(
         future: apiService.fetchWeatherData(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -23,8 +25,7 @@ class WeatherScreen extends StatelessWidget {
             return ListView.builder(
               itemCount: snapshot.data!.length,
               itemBuilder: (context, index) {
-                final weatherData =
-                    snapshot.data![index] as Map<String, dynamic>;
+                final weatherData = snapshot.data![index];
                 return WeatherCard(weatherData: weatherData);
               },
             );
@@ -36,7 +37,7 @@ class WeatherScreen extends StatelessWidget {
 }
 
 class WeatherCard extends StatelessWidget {
-  final Map<String, dynamic> weatherData;
+  final DailyWeather weatherData;
 
   WeatherCard({required this.weatherData});
 
@@ -47,25 +48,59 @@ class WeatherCard extends StatelessWidget {
       elevation: 5.0,
       child: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: Column(
+        child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              weatherData['name'] ?? 'N/A', // Display the name of the area
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
+            // Image on the left
+            Container(
+              width: 80, // Set the width of the image container
+              height: 80, // Set the height of the image container
+              margin: EdgeInsets.only(
+                  right: 16.0), // Add some space between image and text
+              child: weatherData.image.endsWith('.svg')
+                  ? SvgPicture.network(
+                      weatherData.image,
+                      fit: BoxFit
+                          .cover, // Adjust the image to cover the container
+                    )
+                  : Image.network(
+                      weatherData.image,
+                      fit: BoxFit
+                          .cover, // Adjust the image to cover the container
+                    ),
+            ),
+            // Text on the right
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    weatherData.wilayah, // Display the region
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  SizedBox(height: 8),
+                  Text(
+                      'Date: ${weatherData.localDatetime}'), // Display the date
+                  Text(
+                      'Temperature: ${weatherData.suhuUdara}'), // Display the temperature
+                  Text(
+                      'Cloud Coverage: ${weatherData.tutupanAwan}'), // Display cloud coverage
+                  Text(
+                      'Weather Condition: ${weatherData.kondisiCuaca}'), // Display weather condition
+                  Text(
+                      'Wind Direction: ${weatherData.arahAngin}'), // Display wind direction
+                  Text(
+                      'Wind Speed: ${weatherData.kecepatanAngin}'), // Display wind speed
+                  Text(
+                      'Humidity: ${weatherData.kelembapan}'), // Display humidity
+                  Text(
+                      'Visibility: ${weatherData.jarakPandang}'), // Display visibility
+                ],
               ),
             ),
-            SizedBox(height: 8),
-            Text('Date: ${weatherData['date'] ?? 'N/A'}'), // Display the date
-            Text(
-                'Temperature: ${weatherData['temp'] ?? 'N/A'}°C'), // Display the temperature
-            Text(
-                'Humidity: ${weatherData['humidity'] ?? 'N/A'}%'), // Display the humidity
-            Text(
-                'Weather: ${weatherData['weather'] ?? 'N/A'}'), // Display the weather condition
-            // Add more fields as necessary
           ],
         ),
       ),
