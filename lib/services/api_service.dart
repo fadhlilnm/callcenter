@@ -4,11 +4,11 @@ import 'package:callcenter/models/weather.dart';
 
 class ApiService {
   final String _baseUrlCallData =
-      'https://sim-bpbd.jakarta.go.id/api-cc/3-day-call';
+      'use your own api';
   final String _baseUrlTicketData =
-      'https://sim-bpbd.jakarta.go.id/api-cc/3-day-tiketing';
+      'use your own api';
   final String _baseUrlNews =
-      'https://sim-bpbd.jakarta.go.id/api-cc/view-berita';
+      'use your own api';
   final String _authUrl = 'https://api-bpbd.jakarta.go.id/api-prod/auth';
 
   // Function to get current date in 'yyyyMMdd' format
@@ -134,8 +134,8 @@ class ApiService {
     final response = await http.post(
       Uri.parse(_authUrl),
       headers: {
-        'X-Username': 'dev',
-        'X-Password': 'BpbDD3v!!##',
+        'X-Username': 'use your own',
+        'X-Password': 'use your own',
         'Content-Type': 'application/json',
       },
     );
